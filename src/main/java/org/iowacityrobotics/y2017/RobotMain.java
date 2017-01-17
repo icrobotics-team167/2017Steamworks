@@ -17,10 +17,15 @@ public class RobotMain implements IRobotProgram {
 
     @Override
     public void init(IRobot robot) {
-        IOpMode stdMode = robot.getOpManager().getOpMode("standard");
+        // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(SingleJoySubsystem.TYPE).getSubsystem(1);
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE).getSubsystem(0, 1, 2, 3);
-        stdMode.onInit(() -> driveTrain.bind(joy.output().map(DataMappers.singleJoyMecanum())));
+
+        // Set up standard teleop opmode
+        IOpMode stdMode = robot.getOpManager().getOpMode("standard");
+        stdMode.onInit(() -> driveTrain.bind(joy.output()
+                .map(v -> v.x(v.x() * 0.75D).y(v.y() * 0.75D).z(v.z() * 0.75D))
+                .map(DataMappers.singleJoyMecanum())));
         stdMode.whileCondition(() -> true);
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");
     }

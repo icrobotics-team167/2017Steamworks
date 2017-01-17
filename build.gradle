@@ -4,9 +4,6 @@ plugins {
     id 'jaci.openrio.gradle.GradleRIO' version '2017.0.5'
 }
 
-group 'org.iowacityrobotics.y2017'
-version '1.0.0'
-
 frc {
     team = "167"
     robotClass = "org.iowacityrobotics.roboed.impl.FRCRobot"
