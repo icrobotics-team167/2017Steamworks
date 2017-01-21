@@ -17,6 +17,9 @@ public class RobotMain implements IRobotProgram {
 
     @Override
     public void init(IRobot robot) {
+        // Register custom subsystem type
+        robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
+
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(SingleJoySubsystem.TYPE).getSubsystem(1);
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE).getSubsystem(0, 1, 2, 3);
