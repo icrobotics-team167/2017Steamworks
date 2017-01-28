@@ -12,7 +12,7 @@ import org.iowacityrobotics.roboed.impl.subsystem.FRCTerminalSubsystem;
  */
 public class ShooterSubsystem extends FRCTerminalSubsystem<Integer> {
 
-    public static final ISubsystemType<Integer, Void, Provider> TYPE = new FRCSubsystemType<>();
+    public static final ISubsystemType<Integer, Void, IDualPortSubsystemProvider<Integer, Void>> TYPE = new FRCSubsystemType<>();
 
     private final CANTalon m1, m2;
 
