@@ -1,24 +1,22 @@
 package org.iowacityrobotics.y2017;
 
 import com.ctre.CANTalon;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.api.IRobot;
 import org.iowacityrobotics.roboed.api.IRobotProgram;
 import org.iowacityrobotics.roboed.api.RobotMode;
-import org.iowacityrobotics.roboed.api.data.Data;
 import org.iowacityrobotics.roboed.api.operations.IOpMode;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystem;
 import org.iowacityrobotics.roboed.impl.data.DataMappers;
-import org.iowacityrobotics.roboed.impl.data.Interpolators;
-import org.iowacityrobotics.roboed.impl.subsystem.impl.DualTreadSubsystem;
+import org.iowacityrobotics.roboed.impl.subsystem.impl.DualJoySubsystem;
 import org.iowacityrobotics.roboed.impl.subsystem.impl.MecanumSubsystem;
-import org.iowacityrobotics.roboed.impl.subsystem.impl.SingleJoySubsystem;
+import org.iowacityrobotics.roboed.util.collection.Pair;
+import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector3;
 import org.iowacityrobotics.roboed.util.robot.QuadraSpeedController;
 
 public class RobotMain implements IRobotProgram {
 
-    private ISubsystem<Void, Vector3> joy;
+    private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
 
     @Override
@@ -28,7 +26,7 @@ public class RobotMain implements IRobotProgram {
         //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
 
         // Initialize subsystems
-        joy = robot.getSystemRegistry().getProvider(SingleJoySubsystem.TYPE).getSubsystem(1);
+        joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
         QuadraSpeedController talons = new QuadraSpeedController(
                 new CANTalon(3),
                 new CANTalon(4),
@@ -41,10 +39,17 @@ public class RobotMain implements IRobotProgram {
 
         // Set up standard teleop opmode
         IOpMode stdMode = robot.getOpManager().getOpMode("standard");
+        final double threshold = 0.1D;
         stdMode.onInit(() -> driveTrain.bind(joy.output()
-                .map(DataMappers.deadZone(0.2D))
-                .map(v -> v.x(v.x() * 0.75D).y(v.y() * 0.75D).z(v.z() * 0.75D))
-                .map(DataMappers.singleJoyMecanum())));
+                .map(v -> {
+                    if (Math.abs(v.getA().x()) <= threshold)
+                        v.getA().x(0);
+                    if (Math.abs(v.getA().y()) <= threshold)
+                        v.getA().y(0);
+                    return v;
+                })
+                .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)))
+                .map(DataMappers.dualJoyMecanum())));
         stdMode.whileCondition(() -> true);
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");
     }
