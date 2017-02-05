@@ -4,22 +4,22 @@ import com.ctre.CANTalon;
 import org.iowacityrobotics.roboed.api.IRobot;
 import org.iowacityrobotics.roboed.api.IRobotProgram;
 import org.iowacityrobotics.roboed.api.RobotMode;
-import org.iowacityrobotics.roboed.api.data.Data;
+import org.iowacityrobotics.roboed.api.data.IDataSource;
 import org.iowacityrobotics.roboed.api.operations.IOpMode;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystem;
 import org.iowacityrobotics.roboed.impl.data.DataMappers;
 import org.iowacityrobotics.roboed.impl.subsystem.impl.DualJoySubsystem;
 import org.iowacityrobotics.roboed.impl.subsystem.impl.MecanumSubsystem;
 import org.iowacityrobotics.roboed.util.collection.Pair;
-import org.iowacityrobotics.roboed.util.function.TimeDelayCondition;
 import org.iowacityrobotics.roboed.util.math.Vector2;
-import org.iowacityrobotics.roboed.util.math.Vector3;
 import org.iowacityrobotics.roboed.util.robot.QuadraSpeedController;
-import java.util.concurrent.TimeUnit;
+
+import java.util.function.BiFunction;
 
 public class RobotMain implements IRobotProgram {
 
     private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
+    private ISubsystem<Void, Double> gyro;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
 
     @Override
@@ -27,9 +27,11 @@ public class RobotMain implements IRobotProgram {
         System.out.println("INIT");
         // Register custom subsystem type
         //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
+        robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
+        gyro = robot.getSystemRegistry().getProvider(GyroThing.TYPE).getSubsystem(null);
         QuadraSpeedController talons = new QuadraSpeedController(
                 new CANTalon(3),
                 new CANTalon(4),
@@ -43,19 +45,18 @@ public class RobotMain implements IRobotProgram {
         // Set up standard teleop opmode
         IOpMode stdMode = robot.getOpManager().getOpMode("standard");
         final double threshold = 0.1D;
-        stdMode.onInit(() -> driveTrain.bind(joy.output()
-                .map(v -> {
-                    if (Math.abs(v.getA().x()) <= threshold)
-                        v.getA().x(0);
-                    if (Math.abs(v.getA().y()) <= threshold)
-                        v.getA().y(0);
-                    return v;
-                })
-                .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)))
-                .map(DataMappers.dualJoyMecanum())));
+        stdMode.onInit(() -> {
+            IDataSource<Pair<Vector2, Vector2>> joyData = joy.output()
+                    .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)));
+            IDataSource<Double> gyroData = gyro.output()
+                    .map(d -> d * -1);
+            BiFunction<Pair<Vector2, Vector2>, Double, MecanumSubsystem.ControlDataFrame> driveFunc
+                    = (j, g) -> new MecanumSubsystem.ControlDataFrame(j.getA(), j.getB().x(), g);
+            driveTrain.bind(joyData.interpolate(gyroData, driveFunc));
+        });
         stdMode.whileCondition(() -> true);
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");
-
+/*
         // Start Autonomous
         //1 forward 7ish? ft
         //2 pivot turn 60 degrees
@@ -63,8 +64,7 @@ public class RobotMain implements IRobotProgram {
         //4 lever/ws-wiper
         //5 forward ? ft
         //6 backward
-
-        int scenario = 1
+        int scenario = 1;
         //0 = middle; -1 = left; 1 = right
         long d = 0; // distance from l/r
 
@@ -140,7 +140,7 @@ public class RobotMain implements IRobotProgram {
         });
         autoMode.untilCondition(() -> new TimeDelayCondition(2, TimeUnit.SECONDS)); //fwd dist to line
         autoMode.setNext("auto_part_7");
-
+*/
 
     }
 }

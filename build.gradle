@@ -19,6 +19,7 @@ dependencies {
     compile wpilib()
     compile talonSrx()
     compile group: 'org.iowacityrobotics.roboed', name: 'RoboED', version: '2017-1.0.0'
+    compile fileTree(dir: 'libs', include: '**/*.jar')
 }
 
 def robotManifest = {
