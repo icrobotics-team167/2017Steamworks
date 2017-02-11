@@ -7,7 +7,6 @@ import org.iowacityrobotics.roboed.api.RobotMode;
 import org.iowacityrobotics.roboed.api.data.IDataSource;
 import org.iowacityrobotics.roboed.api.operations.IOpMode;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystem;
-import org.iowacityrobotics.roboed.impl.data.DataMappers;
 import org.iowacityrobotics.roboed.impl.subsystem.impl.DualJoySubsystem;
 import org.iowacityrobotics.roboed.impl.subsystem.impl.MecanumSubsystem;
 import org.iowacityrobotics.roboed.util.collection.Pair;
@@ -21,6 +20,8 @@ public class RobotMain implements IRobotProgram {
     private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
     private ISubsystem<Void, Double> gyro;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
+    private ISubsystem<Boolean, Void> climber;
+    private ISubsystem<Void, Boolean> climbBtn;
 
     @Override
     public void init(IRobot robot) {
@@ -28,6 +29,7 @@ public class RobotMain implements IRobotProgram {
         // Register custom subsystem type
         //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
+        robot.getSystemRegistry().registerProvider(ClimbSys.TYPE, new ClimbSys.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
@@ -41,6 +43,8 @@ public class RobotMain implements IRobotProgram {
         talons.getC().setInverted(true);
         talons.getD().setInverted(true);
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE_CUSTOM).getSubsystem(talons);
+        climber = robot.getSystemRegistry().getProvider(ClimbSys.TYPE).getSubsystem(5);
+        climbBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(1, 1);
 
         // Set up standard teleop opmode
         IOpMode stdMode = robot.getOpManager().getOpMode("standard");
@@ -53,6 +57,7 @@ public class RobotMain implements IRobotProgram {
             BiFunction<Pair<Vector2, Vector2>, Double, MecanumSubsystem.ControlDataFrame> driveFunc
                     = (j, g) -> new MecanumSubsystem.ControlDataFrame(j.getA(), j.getB().x(), g);
             driveTrain.bind(joyData.interpolate(gyroData, driveFunc));
+            climber.bind(climbBtn.output());
         });
         stdMode.whileCondition(() -> true);
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");

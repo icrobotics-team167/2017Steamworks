@@ -7,6 +7,7 @@ import org.iowacityrobotics.roboed.api.data.Data;
 import org.iowacityrobotics.roboed.api.data.IDataSource;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystem;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystemType;
+import org.iowacityrobotics.roboed.api.subsystem.provider.IDualPortSubsystemProvider;
 import org.iowacityrobotics.roboed.api.subsystem.provider.ISinglePortSubsystemProvider;
 import org.iowacityrobotics.roboed.impl.subsystem.FRCSubsystemType;
 import org.iowacityrobotics.roboed.impl.subsystem.FRCSourceSubsystem;
@@ -18,15 +19,14 @@ import org.iowacityrobotics.roboed.impl.subsystem.impl.SingleJoySubsystem;
 
 public class ButtonSubsystem extends FRCSourceSubsystem<Boolean> {
 
-    public static final ISubsystemType<Void, Boolean, ISinglePortSubsystemProvider<Void, Boolean>> TYPE = new FRCSubsystemType<>();
+    public static final ISubsystemType<Void, Boolean, IDualPortSubsystemProvider<Void, Boolean>> TYPE = new FRCSubsystemType<>();
 
     private final IDataSource<Boolean> upstream;
 
-    protected ButtonSubsystem() {
+    protected ButtonSubsystem(int ctrl, int btn) {
         super(TYPE);
-
         DriverStation ds = DriverStation.getInstance();
-        upstream = Data.provider(() -> ds.getStickButton(1, (byte) 1));
+        upstream = Data.provider(() -> ds.getStickButton(ctrl, (byte)btn));
     }
 
     @Override
@@ -34,11 +34,11 @@ public class ButtonSubsystem extends FRCSourceSubsystem<Boolean> {
         return upstream;
     }
 
-    public static class Provider implements ISinglePortSubsystemProvider<Void, Boolean> {
+    public static class Provider implements IDualPortSubsystemProvider<Void, Boolean> {
 
         @Override
-        public ISubsystem<Void, Boolean> getSubsystem(int port) {
-            return new ButtonSubsystem();
+        public ISubsystem<Void, Boolean> getSubsystem(int controller, int btn) {
+            return new ButtonSubsystem(controller, btn);
         }
 
     }
