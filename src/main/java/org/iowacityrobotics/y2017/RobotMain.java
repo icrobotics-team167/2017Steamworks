@@ -1,6 +1,9 @@
 package org.iowacityrobotics.y2017;
 
 import com.ctre.CANTalon;
+import com.kauailabs.navx.frc.AHRS;
+import edu.wpi.first.wpilibj.I2C;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.api.IRobot;
 import org.iowacityrobotics.roboed.api.IRobotProgram;
 import org.iowacityrobotics.roboed.api.RobotMode;
@@ -18,20 +21,21 @@ import java.util.function.BiFunction;
 
 public class RobotMain implements IRobotProgram {
 
+    private AHRS ahrs;
     private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
     private ISubsystem<Void, Double> gyro;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
 
     @Override
     public void init(IRobot robot) {
-        System.out.println("INIT");
-        // Register custom subsystem type
+        ahrs = new AHRS(I2C.Port.kMXP);
+        // Register custom subsystem types
         //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
-        gyro = robot.getSystemRegistry().getProvider(GyroThing.TYPE).getSubsystem(null);
+        gyro = robot.getSystemRegistry().getProvider(GyroThing.TYPE).getSubsystem(ahrs);
         QuadraSpeedController talons = new QuadraSpeedController(
                 new CANTalon(3),
                 new CANTalon(4),
@@ -43,20 +47,27 @@ public class RobotMain implements IRobotProgram {
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE_CUSTOM).getSubsystem(talons);
 
         // Set up standard teleop opmode
-        IOpMode stdMode = robot.getOpManager().getOpMode("standard");
+        IOpMode mode = robot.getOpManager().getOpMode("standard");
         final double threshold = 0.1D;
-        stdMode.onInit(() -> {
-            IDataSource<Pair<Vector2, Vector2>> joyData = joy.output()
-                    .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)));
-            IDataSource<Double> gyroData = gyro.output()
-                    .map(d -> d * -1);
-            BiFunction<Pair<Vector2, Vector2>, Double, MecanumSubsystem.ControlDataFrame> driveFunc
-                    = (j, g) -> new MecanumSubsystem.ControlDataFrame(j.getA(), j.getB().x(), g);
-            driveTrain.bind(joyData.interpolate(gyroData, driveFunc));
+        mode.onInit(() -> {
+            IDataSource<MecanumSubsystem.ControlDataFrame> joyData = joy.output()
+                    .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)))
+                    .map(DataMappers.dualJoyMecanum());
+            driveTrain.bind(joyData);
         });
-        stdMode.whileCondition(() -> true);
+        mode.whileCondition(() -> {
+            SmartDashboard.putNumber("accel-x1", ahrs.getWorldLinearAccelX());
+            SmartDashboard.putNumber("accel-x2", ahrs.getRawAccelX());
+            return true;
+        });
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");
-/*
+
+        AutoRoutines ar = new AutoRoutines(robot.getOpManager(), driveTrain, ahrs);
+        mode = ar.drive("auto_test", new Vector2(0, 0.3), 1.27D);
+        robot.getOpManager().setDefaultOpMode(RobotMode.AUTO, "auto_test");
+
+
+
         // Start Autonomous
         //1 forward 7ish? ft
         //2 pivot turn 60 degrees
@@ -64,7 +75,7 @@ public class RobotMain implements IRobotProgram {
         //4 lever/ws-wiper
         //5 forward ? ft
         //6 backward
-        int scenario = 1;
+        /*int scenario = 1;
         //0 = middle; -1 = left; 1 = right
         long d = 0; // distance from l/r
 
@@ -139,8 +150,6 @@ public class RobotMain implements IRobotProgram {
             driveTrain.bind(Data.constant(new MecanumSubsystem.ControlDataFrame(new Vector2(0, .75), 0)));
         });
         autoMode.untilCondition(() -> new TimeDelayCondition(2, TimeUnit.SECONDS)); //fwd dist to line
-        autoMode.setNext("auto_part_7");
-*/
-
+        autoMode.setNext("auto_part_7");*/
     }
 }

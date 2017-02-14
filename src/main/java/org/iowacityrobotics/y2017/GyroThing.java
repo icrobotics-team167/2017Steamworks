@@ -11,17 +11,17 @@ import org.iowacityrobotics.roboed.impl.subsystem.FRCSourceSubsystem;
 import org.iowacityrobotics.roboed.impl.subsystem.FRCSubsystemType;
 
 /**
+ * Subsystem for MXP nav board's gyro function.
  * @author Evan Geng and/or Bruno (Mars) Rengel
  */
 public class GyroThing extends FRCSourceSubsystem<Double> {
 
-    public static final ISubsystemType<Void, Double, IGenericSubsystemProvider<Void, Double, Void>> TYPE = new FRCSubsystemType<>();
+    public static final ISubsystemType<Void, Double, IGenericSubsystemProvider<Void, Double, AHRS>> TYPE = new FRCSubsystemType<>();
 
     private final IDataSource<Double> dataSrc;
 
-    public GyroThing() {
+    public GyroThing(AHRS ahrs) {
         super(TYPE);
-        AHRS ahrs = new AHRS(I2C.Port.kMXP);
         ahrs.reset();
         this.dataSrc = Data.provider(ahrs::getAngle);
     }
@@ -31,11 +31,11 @@ public class GyroThing extends FRCSourceSubsystem<Double> {
         return dataSrc;
     }
 
-    public static class Provider implements IGenericSubsystemProvider<Void, Double, Void> {
+    public static class Provider implements IGenericSubsystemProvider<Void, Double, AHRS> {
 
         @Override
-        public ISubsystem<Void, Double> getSubsystem(Void ignored) {
-            return new GyroThing();
+        public ISubsystem<Void, Double> getSubsystem(AHRS ahrs) {
+            return new GyroThing(ahrs);
         }
 
     }
