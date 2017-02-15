@@ -10,9 +10,9 @@ import org.iowacityrobotics.roboed.impl.subsystem.FRCTerminalSubsystem;
 /**
  * @author Evan Geng
  */
-public class ShooterSubsystem extends FRCTerminalSubsystem<Integer> {
+public class ShooterSubsystem extends FRCTerminalSubsystem<Boolean> {
 
-    public static final ISubsystemType<Integer, Void, IDualPortSubsystemProvider<Integer, Void>> TYPE = new FRCSubsystemType<>();
+    public static final ISubsystemType<Boolean, Void, IDualPortSubsystemProvider<Boolean, Void>> TYPE = new FRCSubsystemType<>();
 
     private final CANTalon m1, m2;
 
@@ -23,15 +23,15 @@ public class ShooterSubsystem extends FRCTerminalSubsystem<Integer> {
     }
 
     @Override
-    protected void processData(Integer vel) {
-        m1.set(vel);
-        m2.set(-vel);
+    protected void processData(Boolean shooting) {
+        m1.set(shooting ? 1 : 0);
+        m2.set(shooting ? 0.75 : 0);
     }
 
-    public static class Provider implements IDualPortSubsystemProvider<Integer, Void> {
+    public static class Provider implements IDualPortSubsystemProvider<Boolean, Void> {
 
         @Override
-        public ISubsystem<Integer, Void> getSubsystem(int port1, int port2) {
+        public ISubsystem<Boolean, Void> getSubsystem(int port1, int port2) {
             return new ShooterSubsystem(port1, port2);
         }
 

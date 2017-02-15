@@ -25,31 +25,43 @@ public class RobotMain implements IRobotProgram {
     private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
     private ISubsystem<Void, Double> gyro;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
+
     private ISubsystem<Boolean, Void> climber;
     private ISubsystem<Void, Boolean> climbBtn;
+
+    private ISubsystem<Boolean, Void> shooter;
+    private ISubsystem<Void, Boolean> shootBtn;
+
+    private ISubsystem<Boolean, Void> pickuper;
+    private ISubsystem<Void, Boolean> pickupBtn;
 
     @Override
     public void init(IRobot robot) {
         ahrs = new AHRS(I2C.Port.kMXP);
         // Register custom subsystem types
-        //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
+        robot.getSystemRegistry().registerProvider(ButtonSubsystem.TYPE, new ButtonSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
         robot.getSystemRegistry().registerProvider(ClimbSys.TYPE, new ClimbSys.Provider());
+        robot.getSystemRegistry().registerProvider(BallPickupSubsystem.TYPE, new BallPickupSubsystem.Provider());
+        robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
+        robot.getSystemRegistry().registerProvider(USMagi.TYPE, new USMagi.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
         gyro = robot.getSystemRegistry().getProvider(GyroThing.TYPE).getSubsystem(ahrs);
-        QuadraSpeedController talons = new QuadraSpeedController(
-                new CANTalon(3),
-                new CANTalon(4),
-                new CANTalon(2),
-                new CANTalon(5)
-        );
+        QuadraSpeedController talons = QuadraSpeedController.ofCANTalons(1, 4, 6, 3);
         talons.getC().setInverted(true);
         talons.getD().setInverted(true);
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE_CUSTOM).getSubsystem(talons);
-        climber = robot.getSystemRegistry().getProvider(ClimbSys.TYPE).getSubsystem(5);
-        climbBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(1, 1);
+
+        climber = robot.getSystemRegistry().getProvider(ClimbSys.TYPE).getSubsystem(2);
+        climbBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 8);
+
+        shooter = robot.getSystemRegistry().getProvider(ShooterSubsystem.TYPE).getSubsystem(8, 5);
+        shootBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 1);
+
+        pickuper = robot.getSystemRegistry().getProvider(BallPickupSubsystem.TYPE).getSubsystem(7);
+        pickupBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 2);
 
         // Set up standard teleop opmode
         IOpMode mode = robot.getOpManager().getOpMode("standard");
@@ -60,6 +72,8 @@ public class RobotMain implements IRobotProgram {
                     .map(DataMappers.dualJoyMecanum());
             driveTrain.bind(joyData);
             climber.bind(climbBtn.output());
+            shooter.bind(shootBtn.output());
+            pickuper.bind(pickupBtn.output());
         });
         mode.whileCondition(() -> {
             SmartDashboard.putNumber("accel-x1", ahrs.getWorldLinearAccelX());

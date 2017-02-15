@@ -14,7 +14,7 @@ import org.iowacityrobotics.roboed.impl.subsystem.FRCTerminalSubsystem;
 public class ClimbSys extends FRCTerminalSubsystem<Boolean> {
 
     public static final ISubsystemType<Boolean, Void, ISinglePortSubsystemProvider<Boolean, Void>> TYPE = new FRCSubsystemType<>();
-    private static final double SPEED = 0.75;
+    private static final double SPEED = -0.75;
 
     private final CANTalon motor;
 
