@@ -25,6 +25,8 @@ public class RobotMain implements IRobotProgram {
     private ISubsystem<Void, Pair<Vector2, Vector2>> joy;
     private ISubsystem<Void, Double> gyro;
     private ISubsystem<MecanumSubsystem.ControlDataFrame, Void> driveTrain;
+    private ISubsystem<Boolean, Void> climber;
+    private ISubsystem<Void, Boolean> climbBtn;
 
     @Override
     public void init(IRobot robot) {
@@ -32,6 +34,7 @@ public class RobotMain implements IRobotProgram {
         // Register custom subsystem types
         //robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
+        robot.getSystemRegistry().registerProvider(ClimbSys.TYPE, new ClimbSys.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
@@ -45,6 +48,8 @@ public class RobotMain implements IRobotProgram {
         talons.getC().setInverted(true);
         talons.getD().setInverted(true);
         driveTrain = robot.getSystemRegistry().getProvider(MecanumSubsystem.TYPE_CUSTOM).getSubsystem(talons);
+        climber = robot.getSystemRegistry().getProvider(ClimbSys.TYPE).getSubsystem(5);
+        climbBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(1, 1);
 
         // Set up standard teleop opmode
         IOpMode mode = robot.getOpManager().getOpMode("standard");
@@ -54,6 +59,7 @@ public class RobotMain implements IRobotProgram {
                     .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)))
                     .map(DataMappers.dualJoyMecanum());
             driveTrain.bind(joyData);
+            climber.bind(climbBtn.output());
         });
         mode.whileCondition(() -> {
             SmartDashboard.putNumber("accel-x1", ahrs.getWorldLinearAccelX());
