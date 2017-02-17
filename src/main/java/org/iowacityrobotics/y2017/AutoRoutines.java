@@ -38,6 +38,16 @@ public class AutoRoutines {
         return mode;
     }
 
+    public IOpMode driveAng(String id, double pointTurn, float da) {
+        IOpMode mode = opMan.getOpMode(id);
+        mode.onInit(() -> {
+            ahrs.reset();
+            drive.bind(Data.provider(() -> new MecanumSubsystem.ControlDataFrame(Vector2.ZERO, pointTurn, ahrs.getAngle())));
+        });
+        mode.untilCondition(new NavAngle(ahrs, da));
+        return mode;
+    }
+
     public IOpMode drive(String id, Vector2 dir, double meters) {
         IOpMode mode = opMan.getOpMode(id);
         mode.onInit(() -> {

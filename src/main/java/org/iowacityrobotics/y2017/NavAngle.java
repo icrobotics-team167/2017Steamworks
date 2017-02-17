@@ -13,7 +13,7 @@ public class NavAngle implements IConditionFactory {
     private final AHRS ahrs;
     private final float deltaDegrees;
 
-    public NavAngle(AHRS ahrs, AHRS.BoardAxis axis, float deltaDegrees) {
+    public NavAngle(AHRS ahrs, float deltaDegrees) {
         this.ahrs = ahrs;
         this.deltaDegrees = deltaDegrees;
     }

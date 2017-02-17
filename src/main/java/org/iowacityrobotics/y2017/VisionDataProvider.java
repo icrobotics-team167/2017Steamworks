@@ -1,10 +1,7 @@
 package org.iowacityrobotics.y2017;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
-import org.iowacityrobotics.roboed.api.data.IDataSource;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -17,7 +14,7 @@ public class VisionDataProvider implements Supplier<VisionDataProvider.VDF> {
     
     @Override
     public VDF get() {
-        NetworkTable tbl = NetworkTable.getTable("asdf");
+        NetworkTable tbl = NetworkTable.getTable("myContoursReport");
         double cX = tbl.getNumberArray("centerX", NONE)[0];
         double cY = tbl.getNumberArray("centerY", NONE)[0];
         double a = tbl.getNumberArray("area", NONE)[0];
@@ -28,7 +25,9 @@ public class VisionDataProvider implements Supplier<VisionDataProvider.VDF> {
 
     // Vision data frame
     public static class VDF {
-        
+
+
+
     }
     
 }
