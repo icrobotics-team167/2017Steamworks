@@ -3,10 +3,12 @@ package org.iowacityrobotics.y2017;
 import com.ctre.CANTalon;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.I2C;
+import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.api.IRobot;
 import org.iowacityrobotics.roboed.api.IRobotProgram;
 import org.iowacityrobotics.roboed.api.RobotMode;
+import org.iowacityrobotics.roboed.api.data.Data;
 import org.iowacityrobotics.roboed.api.data.IDataSource;
 import org.iowacityrobotics.roboed.api.operations.IOpMode;
 import org.iowacityrobotics.roboed.api.subsystem.ISubsystem;
@@ -29,11 +31,19 @@ public class RobotMain implements IRobotProgram {
     private ISubsystem<Boolean, Void> climber;
     private ISubsystem<Void, Boolean> climbBtn;
 
+    private ISubsystem<Boolean, Void> eggs;
+    private ISubsystem<Void, Boolean> eggBtn;
+
     private ISubsystem<Boolean, Void> shooter;
     private ISubsystem<Void, Boolean> shootBtn;
 
     private ISubsystem<Boolean, Void> pickuper;
     private ISubsystem<Void, Boolean> pickupBtn;
+
+    private ISubsystem<Boolean, Void> windshield;
+    private ISubsystem<Void, Boolean> wsBtn;
+
+    private IDataSource<VisionDataProvider.VDF> vdfSrc;
 
     @Override
     public void init(IRobot robot) {
@@ -42,9 +52,11 @@ public class RobotMain implements IRobotProgram {
         robot.getSystemRegistry().registerProvider(ButtonSubsystem.TYPE, new ButtonSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(GyroThing.TYPE, new GyroThing.Provider());
         robot.getSystemRegistry().registerProvider(ClimbSys.TYPE, new ClimbSys.Provider());
+        robot.getSystemRegistry().registerProvider(SpinningEggMachine.TYPE, new SpinningEggMachine.Provider());
         robot.getSystemRegistry().registerProvider(BallPickupSubsystem.TYPE, new BallPickupSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(ShooterSubsystem.TYPE, new ShooterSubsystem.Provider());
         robot.getSystemRegistry().registerProvider(USMagi.TYPE, new USMagi.Provider());
+        robot.getSystemRegistry().registerProvider(WindshieldSubsystem.TYPE, new WindshieldSubsystem.Provider());
 
         // Initialize subsystems
         joy = robot.getSystemRegistry().getProvider(DualJoySubsystem.TYPE).getSubsystem(1);
@@ -57,23 +69,34 @@ public class RobotMain implements IRobotProgram {
         climber = robot.getSystemRegistry().getProvider(ClimbSys.TYPE).getSubsystem(2);
         climbBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 8);
 
+        //VictorSP eggVictor = new VictorSP(5);
+        //eggs = robot.getSystemRegistry().getProvider(SpinningEggMachine.TYPE).getSubsystem(eggVictor);
+        //eggBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 4);
+
         shooter = robot.getSystemRegistry().getProvider(ShooterSubsystem.TYPE).getSubsystem(8, 5);
         shootBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 1);
 
         pickuper = robot.getSystemRegistry().getProvider(BallPickupSubsystem.TYPE).getSubsystem(7);
         pickupBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 2);
 
+        windshield = robot.getSystemRegistry().getProvider(WindshieldSubsystem.TYPE).getSubsystem(0);
+        wsBtn = robot.getSystemRegistry().getProvider(ButtonSubsystem.TYPE).getSubsystem(2, 3);
+
+        vdfSrc = Data.provider(new VisionDataProvider());
+
         // Set up standard teleop opmode
         IOpMode mode = robot.getOpManager().getOpMode("standard");
         final double threshold = 0.1D;
         mode.onInit(() -> {
             IDataSource<MecanumSubsystem.ControlDataFrame> joyData = joy.output()
-                    .map(v -> Pair.of(v.getA().multiply(0.75D), v.getB().multiply(0.75D)))
+                    .map(v -> Pair.of(v.getA().x(v.getA().x() * -1).multiply(0.75D), v.getB().multiply(0.75D)))
                     .map(DataMappers.dualJoyMecanum());
             driveTrain.bind(joyData);
             climber.bind(climbBtn.output());
+            //eggs.bind(eggBtn.output());
             shooter.bind(shootBtn.output());
             pickuper.bind(pickupBtn.output());
+            windshield.bind(wsBtn.output());
         });
         mode.whileCondition(() -> {
             SmartDashboard.putNumber("accel-x1", ahrs.getWorldLinearAccelX());
@@ -83,10 +106,8 @@ public class RobotMain implements IRobotProgram {
         robot.getOpManager().setDefaultOpMode(RobotMode.TELEOP, "standard");
 
         AutoRoutines ar = new AutoRoutines(robot.getOpManager(), driveTrain, ahrs);
-        mode = ar.drive("auto_test", new Vector2(0, 0.3), 1.27D);
+        mode = ar.driveTime("auto_test", new Vector2(0, -0.5), 10000L);
         robot.getOpManager().setDefaultOpMode(RobotMode.AUTO, "auto_test");
-
-
 
         // Start Autonomous
         //1 forward 7ish? ft

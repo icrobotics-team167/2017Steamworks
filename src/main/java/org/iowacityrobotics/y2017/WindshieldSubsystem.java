@@ -25,8 +25,8 @@ public class WindshieldSubsystem extends FRCTerminalSubsystem<Boolean> {
     protected WindshieldSubsystem(int p) {
         super(TYPE);
         //Initializes all dat shit
-        angle1 = 0;
-        angle2 = 55;
+        angle1 = 175;
+        angle2 = 115;
         servo = new Servo(p);
     }
 

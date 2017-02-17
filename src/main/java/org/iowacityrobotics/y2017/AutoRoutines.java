@@ -28,6 +28,16 @@ public class AutoRoutines {
         this.ahrs = ahrs;
     }
 
+    public IOpMode driveTime(String id, Vector2 dir, long time) {
+        IOpMode mode = opMan.getOpMode(id);
+        mode.onInit(() -> {
+            ahrs.reset();
+            drive.bind(Data.provider(() -> new MecanumSubsystem.ControlDataFrame(dir, 0, ahrs.getAngle())));
+        });
+        mode.untilCondition(() -> new TimeDelayCondition(time));
+        return mode;
+    }
+
     public IOpMode drive(String id, Vector2 dir, double meters) {
         IOpMode mode = opMan.getOpMode(id);
         mode.onInit(() -> {
