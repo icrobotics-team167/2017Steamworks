@@ -1,14 +1,15 @@
 package org.iowacityrobotics.y2017;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
+import org.iowacityrobotics.roboed.data.source.Source;
 
 import java.util.function.Supplier;
 
 /**
- * Created by icrobotics on 2/16/2017.
+ * VISION DATA STUFF!!!!!
  * @author Evan Geng
  */
-public class VisionDataProvider implements Supplier<VisionDataProvider.VDF> {
+public class VisionDataProvider extends Source<VisionDataProvider.VDF> {
 
     private static final double[] NONE = new double[] {0};
     
@@ -26,7 +27,7 @@ public class VisionDataProvider implements Supplier<VisionDataProvider.VDF> {
     // Vision data frame
     public static class VDF {
 
-
+        // TODO Implement pls
 
     }
     
