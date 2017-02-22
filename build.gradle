@@ -7,7 +7,6 @@ plugins {
 frc {
     team = "167"
     robotClass = "org.iowacityrobotics.roboed.robot.Robot"
-
 }
 
 repositories {
