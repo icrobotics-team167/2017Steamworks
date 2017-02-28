@@ -1,9 +1,7 @@
 package org.iowacityrobotics.y2017;
 
 import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.SerialPort;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.data.Data;
 import org.iowacityrobotics.roboed.data.sink.Sink;
 import org.iowacityrobotics.roboed.data.source.Source;
@@ -65,6 +63,13 @@ public class RobotMain implements IRobotProgram {
                 .map(MapperSystems.CONTROL.buttonValue(175D, 115D));
         Sink<Double> snkWs = SinkSystems.MOTOR.servo(0);
 
+        // Ultrasonic sensor
+        Source<Double> srcUs = SourceSystems.SENSOR.analog(0)
+                .map(Data.mapper(v -> v * 3.4528D));
+
+        // Smart Dashboard stuff
+        Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
+
         // Vision data source
         Source<VisionDataProvider.VDF> srcVis = new VisionDataProvider();
 
@@ -76,13 +81,8 @@ public class RobotMain implements IRobotProgram {
             snkEgg.bind(srcEgg.map(MapperSystems.CONTROL.buttonValue(0D, 0.8D)));
             snkPickup.bind(srcPickup);
             snkWs.bind(srcWs);
-            //Flow.waitInfinite();
-            Flow.waitWhile(() -> {
-                SmartDashboard.putNumber("angle", ahrs.getAngle());
-                SmartDashboard.putNumber("acc-x", ahrs.getRawAccelX());
-                SmartDashboard.putNumber("dis-x", ahrs.getDisplacementX());
-                return true;
-            });
+            snkDb.bind(srcUs);
+            Flow.waitInfinite();
         });
 
         // Auto mode
