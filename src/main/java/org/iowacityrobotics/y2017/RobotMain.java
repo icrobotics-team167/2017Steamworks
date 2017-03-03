@@ -16,6 +16,8 @@ import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
+import org.iowacityrobotics.roboed.util.collection.Pair;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class RobotMain implements IRobotProgram {
 
@@ -71,7 +73,7 @@ public class RobotMain implements IRobotProgram {
         Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
 
         // Vision data source
-        Source<VisionDataProvider.VDF> srcVis = new VisionDataProvider();
+        Source<Pair<Vector4,Vector4>> srcVis = new VisionDataProvider();
 
         // Teleop mode
         RobotMode.TELEOP.setOperation(() -> {
@@ -93,7 +95,32 @@ public class RobotMain implements IRobotProgram {
             ptTurn(0.36, 90F);
             drive(new Vector2(0, 0.3), 1000L);
             ptTurn(0.36, 90F);
-            drive(new Vector2(0, 0.3), 1000L);*/
+            drive(new Vector2(0, 0.3), 1000L);
+            */
+
+            while (1 == 1) {
+                Pair<Vector4, Vector4> pair = srcVis.get();
+                if (pair == null) drive(new Vector2(.5, 0), 250L); //shitty method of dealing w/ problems
+                Vector4 r1 = pair.getA();
+                Vector4 r2 = pair.getB();
+                double x1 = r1.x(); //x val of first rectangle
+                double x2 = r1.x(); //x val of second rectangle
+                double h1 = r1.w();
+                double h2 = r2.w();
+                double d = h1-h2;
+                if (Math.abs(d) <= 5) break; //quit loop if parallel
+                if ((x1 < x2) && d < 0)
+                    ptTurn(.35, -5F);
+                if ((x1 < x2) && d > 0)
+                    ptTurn(.35, 5F);
+                if ((x1 > x2) && d < 0)
+                    ptTurn(.35, 5F);
+                if ((x1 > x2) && d > 0)
+                    ptTurn(.35, -5F);
+
+            }
+
+
         });
     }
 
