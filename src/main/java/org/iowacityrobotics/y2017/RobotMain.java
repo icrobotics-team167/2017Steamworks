@@ -11,6 +11,7 @@ import org.iowacityrobotics.roboed.robot.RobotMode;
 import org.iowacityrobotics.roboed.subsystem.MapperSystems;
 import org.iowacityrobotics.roboed.subsystem.SinkSystems;
 import org.iowacityrobotics.roboed.subsystem.SourceSystems;
+import org.iowacityrobotics.roboed.util.collection.Pair;
 import org.iowacityrobotics.roboed.util.logging.LogLevel;
 import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector2;
@@ -71,7 +72,7 @@ public class RobotMain implements IRobotProgram {
         Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
 
         // Vision data source
-        Source<VisionDataProvider.VDF> srcVis = new VisionDataProvider();
+        Source<Pair<Vector4, Vector4>> srcVis = new VisionDataProvider();
 
         // Teleop mode
         RobotMode.TELEOP.setOperation(() -> {
