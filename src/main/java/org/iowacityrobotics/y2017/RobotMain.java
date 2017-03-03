@@ -11,6 +11,7 @@ import org.iowacityrobotics.roboed.robot.RobotMode;
 import org.iowacityrobotics.roboed.subsystem.MapperSystems;
 import org.iowacityrobotics.roboed.subsystem.SinkSystems;
 import org.iowacityrobotics.roboed.subsystem.SourceSystems;
+import org.iowacityrobotics.roboed.util.collection.Pair;
 import org.iowacityrobotics.roboed.util.logging.LogLevel;
 import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector2;
@@ -42,7 +43,7 @@ public class RobotMain implements IRobotProgram {
         snkDrive = SinkSystems.DRIVE.mecanum(talons);
 
         // Climber
-        Source<Double> srcClimb = SourceSystems.CONTROL.button(2, 8)
+        Source<Double> srcClimb = SourceSystems.CONTROL.button(1, 8)
                 .map(MapperSystems.CONTROL.buttonValue(0D, -0.75D));
         Sink<Double> snkClimb = SinkSystems.MOTOR.canTalon(2);
 
@@ -73,7 +74,7 @@ public class RobotMain implements IRobotProgram {
         Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
 
         // Vision data source
-        Source<Pair<Vector4,Vector4>> srcVis = new VisionDataProvider();
+        Source<Pair<Vector4, Vector4>> srcVis = new VisionDataProvider();
 
         // Teleop mode
         RobotMode.TELEOP.setOperation(() -> {

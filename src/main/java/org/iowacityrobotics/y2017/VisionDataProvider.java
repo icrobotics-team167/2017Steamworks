@@ -38,7 +38,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
             double dX_ab = Math.abs(arrX[0] - arrX[1]); // Find the difference in X coordinates for A and B
             double dX_bc = Math.abs(arrX[1] - arrX[2]); // Same for B and C
             double dX_ac = Math.abs(arrX[0] - arrX[2]); // Same for A and C
-            if (dX_ab + dX_bc + dX_ac > 300) // If none of them are within 100 of another one...
+            if (dX_ab > 100 && dX_bc > 100 && dX_ac > 100) // If none of them are within 100 of another one...
                 return null; // Abort
             if (dX_ab < dX_bc && dX_ab < dX_ac) { // A and B have the least diff
                 double h = Math.abs(arrY[1] - arrY[0]) + 0.5D * (arrH[0] + arrH[1]); // Find the height of the contour that should be there
