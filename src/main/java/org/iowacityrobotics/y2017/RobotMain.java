@@ -91,6 +91,8 @@ public class RobotMain implements IRobotProgram {
         // Auto mode
         RobotMode.AUTO.setOperation(() -> {
             final Vector4 vec = new Vector4();
+            
+            Data.pushState();
             Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
                     c -> c == null ? Vector4.ZERO : vec.z(0.35 * Math.signum(c.getB().w() - c.getA().w()))
             ));
@@ -99,6 +101,7 @@ public class RobotMain implements IRobotProgram {
                 Pair<Vector4, Vector4> c = srcVis.get();
                 return c.getA().w() == c.getB().w();
             });
+            Data.popState();
         });
     }
 
