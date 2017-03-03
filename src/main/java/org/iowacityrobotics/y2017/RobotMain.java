@@ -74,7 +74,7 @@ public class RobotMain implements IRobotProgram {
         Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
 
         // Vision data source
-        Source<Pair<Vector4, Vector4>> srcVis = new VisionDataProvider();
+        Source<Pair<Vector4, Vector4>> srcVis = Data.cached(new VisionDataProvider(), 50L);
 
         // Teleop mode
         RobotMode.TELEOP.setOperation(() -> {
@@ -90,38 +90,15 @@ public class RobotMain implements IRobotProgram {
 
         // Auto mode
         RobotMode.AUTO.setOperation(() -> {
-            /*drive(new Vector2(0, 0.3), 1000L);
-            ptTurn(0.36, 90F);
-            drive(new Vector2(0, 0.3), 1000L);
-            ptTurn(0.36, 90F);
-            drive(new Vector2(0, 0.3), 1000L);
-            ptTurn(0.36, 90F);
-            drive(new Vector2(0, 0.3), 1000L);
-            */
-
-            while (1 == 1) {
-                Pair<Vector4, Vector4> pair = srcVis.get();
-                if (pair == null) drive(new Vector2(.5, 0), 250L); //shitty method of dealing w/ problems
-                Vector4 r1 = pair.getA();
-                Vector4 r2 = pair.getB();
-                double x1 = r1.x(); //x val of first rectangle
-                double x2 = r1.x(); //x val of second rectangle
-                double h1 = r1.w();
-                double h2 = r2.w();
-                double d = h1-h2;
-                if (Math.abs(d) <= 5) break; //quit loop if parallel
-                if ((x1 < x2) && d < 0)
-                    ptTurn(.35, -5F);
-                if ((x1 < x2) && d > 0)
-                    ptTurn(.35, 5F);
-                if ((x1 > x2) && d < 0)
-                    ptTurn(.35, 5F);
-                if ((x1 > x2) && d > 0)
-                    ptTurn(.35, -5F);
-
-            }
-
-
+            final Vector4 vec = new Vector4();
+            Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
+                    c -> c == null ? Vector4.ZERO : vec.z(0.35 * Math.signum(c.getB().w() - c.getA().w()))
+            ));
+            snkDrive.bind(srcVisionRotate);
+            Flow.waitUntil(() -> {
+                Pair<Vector4, Vector4> c = srcVis.get();
+                return c.getA().w() == c.getB().w();
+            });
         });
     }
 
