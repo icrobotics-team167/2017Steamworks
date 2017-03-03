@@ -41,7 +41,7 @@ public class RobotMain implements IRobotProgram {
         snkDrive = SinkSystems.DRIVE.mecanum(talons);
 
         // Climber
-        Source<Double> srcClimb = SourceSystems.CONTROL.button(2, 8)
+        Source<Double> srcClimb = SourceSystems.CONTROL.button(1, 8)
                 .map(MapperSystems.CONTROL.buttonValue(0D, -0.75D));
         Sink<Double> snkClimb = SinkSystems.MOTOR.canTalon(2);
 
