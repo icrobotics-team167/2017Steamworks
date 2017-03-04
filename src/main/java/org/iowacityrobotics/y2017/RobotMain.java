@@ -2,6 +2,8 @@ package org.iowacityrobotics.y2017;
 
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.data.Data;
 import org.iowacityrobotics.roboed.data.sink.Sink;
 import org.iowacityrobotics.roboed.data.source.Source;
@@ -17,8 +19,6 @@ import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
-import org.iowacityrobotics.roboed.util.collection.Pair;
-import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 public class RobotMain implements IRobotProgram {
 
@@ -29,9 +29,11 @@ public class RobotMain implements IRobotProgram {
     public void init() {
         Logs.setLevel(LogLevel.DEBUG);
 
-        // Gyro
+        // Nav board
         ahrs = new AHRS(SerialPort.Port.kMXP);
         ahrs.reset();
+        Source<Double> srcJerk = new Differential()
+                .bind(Data.source(() -> (double)ahrs.getRawAccelX()));
 
         // Drive train
         Source<Vector4> srcDrive = SourceSystems.CONTROL.dualJoy(1)
@@ -70,11 +72,15 @@ public class RobotMain implements IRobotProgram {
         Source<Double> srcUs = SourceSystems.SENSOR.analog(0)
                 .map(Data.mapper(v -> v * 3.4528D));
 
-        // Smart Dashboard stuff
-        Sink<Double> snkDb = SinkSystems.DASH.number("ultrasonic");
-
         // Vision data source
         Source<Pair<Vector4, Vector4>> srcVis = Data.cached(new VisionDataProvider(), 50L);
+
+        // Auto routine control
+        SendableChooser<Integer> rtCtrl = new SendableChooser<>();
+        rtCtrl.addObject("left", -1);
+        rtCtrl.addDefault("center", 0);
+        rtCtrl.addObject("right", 1);
+        SmartDashboard.putData("routine", rtCtrl);
 
         // Teleop mode
         RobotMode.TELEOP.setOperation(() -> {
@@ -84,24 +90,42 @@ public class RobotMain implements IRobotProgram {
             snkEgg.bind(srcEgg.map(MapperSystems.CONTROL.buttonValue(0D, 0.8D)));
             snkPickup.bind(srcPickup);
             snkWs.bind(srcWs);
-            snkDb.bind(srcUs);
             Flow.waitInfinite();
         });
 
         // Auto mode
         RobotMode.AUTO.setOperation(() -> {
-            final Vector4 vec = new Vector4();
-            
-            Data.pushState();
+            final Vector2 vec2 = new Vector2();
+            final Vector4 vec4 = new Vector4();
+
+            int routine = rtCtrl.getSelected();
+            if (routine != 0) {
+                drive(vec2.y(0.35D), 1650L);
+                ptTurn(0.35, 30 * Math.signum(routine));
+            } else {
+                drive(vec2.y(0.35D), 500L);
+            }
+
+            drive(vec2.y(0.32D), 325L);
+            Flow.waitFor(1000L);
+            drive(vec2.y(-0.32D), 325L);
+
+            /*Data.pushState();
             Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
-                    c -> c == null ? Vector4.ZERO : vec.z(0.35 * Math.signum(c.getB().w() - c.getA().w()))
+                    c -> c == null ? Vector4.ZERO : vec4.z(0.35 * Math.signum(c.getB().w() - c.getA().w()))
             ));
             snkDrive.bind(srcVisionRotate);
             Flow.waitUntil(() -> {
                 Pair<Vector4, Vector4> c = srcVis.get();
                 return c.getA().w() == c.getB().w();
             });
-            Data.popState();
+            Data.popState();*/
+
+            // TODO Strafe
+
+            // TODO Place gear
+
+            // TODO Cross line
         });
     }
 
