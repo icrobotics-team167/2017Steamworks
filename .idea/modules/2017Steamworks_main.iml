@@ -18,13 +18,14 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilibj:athena:2017.2.1" level="project" />
-    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilib.networktables.java:NetworkTables:arm:3.1.6" level="project" />
-    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilib.networktables.java:NetworkTables:desktop:3.1.6" level="project" />
+    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilibj:athena:2017.3.1" level="project" />
+    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilib.networktables.java:NetworkTables:arm:3.1.7" level="project" />
+    <orderEntry type="library" name="Gradle: edu.wpi.first.wpilib.networktables.java:NetworkTables:desktop:3.1.7" level="project" />
     <orderEntry type="library" name="Gradle: org.opencv:opencv-java:3.1.0" level="project" />
-    <orderEntry type="library" name="Gradle: edu.wpi.cscore.java:cscore:arm:1.0.1" level="project" />
-    <orderEntry type="library" name="Gradle: thirdparty.frc.ctre:Toolsuite-Java:4.4.1.9" level="project" />
+    <orderEntry type="library" name="Gradle: edu.wpi.cscore.java:cscore:arm:1.0.2" level="project" />
+    <orderEntry type="library" name="Gradle: thirdparty.frc.ctre:Toolsuite-Java:4.4.1.11" level="project" />
     <orderEntry type="library" name="Gradle: org.iowacityrobotics.roboed:RoboED:2017-1.0.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.jcraft:jsch:0.1.44-1" level="project" />
     <orderEntry type="library" name="Gradle: com.mashape.unirest:unirest-java:1.4.9" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.httpcomponents:httpclient:4.5.2" level="project" />
     <orderEntry type="library" name="Gradle: org.apache.httpcomponents:httpasyncclient:4.1.1" level="project" />

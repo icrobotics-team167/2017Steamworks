@@ -1,5 +1,8 @@
 package org.iowacityrobotics.y2017;
 
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.Session;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -20,6 +23,17 @@ import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+
 public class RobotMain implements IRobotProgram {
 
     private AHRS ahrs;
@@ -28,6 +42,43 @@ public class RobotMain implements IRobotProgram {
     @Override
     public void init() {
         Logs.setLevel(LogLevel.DEBUG);
+
+        // Deploy vision code
+        Session sess = null;
+        try (JarFile jar = new JarFile(new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()))) {
+            Logs.info("Establishing SSH connection to rpi...");
+            sess = SSHUtil.connect("raspberrypi.local", 22, "pi", "raspberry");
+            ChannelSftp sftp = (ChannelSftp)sess.openChannel("sftp");
+            sftp.connect();
+            sftp.cd("/home/pi");
+
+            Logs.info("Unpacking and transferring vision code...");
+            Enumeration<JarEntry> entries = jar.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String jarPath = entry.getName();
+                if (jarPath.startsWith("python/") && !jarPath.endsWith("python/")) {
+                    try (InputStream in = new BufferedInputStream(jar.getInputStream(entry))) {
+                        String name = jarPath.substring(jarPath.lastIndexOf('/') + 1);
+                        Logs.info("Transferring file: {}", name);
+                        sftp.put(in, name);
+                    }
+                }
+            }
+            sftp.exit();
+
+            Logs.info("Executing vision code...");
+            ChannelExec exec = (ChannelExec)sess.openChannel("exec");
+            exec.setCommand("screen -S vision; python ~/visionNetworkRun.py; detach");
+            exec.connect();
+            exec.disconnect();
+        } catch (Exception e) {
+            Logs.error("Could not deploy vision code!", e);
+            throw new RuntimeException(e);
+        } finally {
+            if (sess != null)
+                sess.disconnect();
+        }
 
         // Nav board
         ahrs = new AHRS(SerialPort.Port.kMXP);
