@@ -15,7 +15,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
     private final NetworkTable tbl;
     
     public VisionDataProvider() {
-        this.tbl = NetworkTable.getTable("myContoursReport");
+        this.tbl = NetworkTable.getTable("gearPlacerVision");
     }
     
     @Override

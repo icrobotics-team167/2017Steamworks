@@ -5,6 +5,7 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.Session;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.iowacityrobotics.roboed.data.Data;
@@ -26,11 +27,7 @@ import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -38,6 +35,7 @@ public class RobotMain implements IRobotProgram {
 
     private AHRS ahrs;
     private Sink<Vector4> snkDrive;
+    private NetworkTable tbl;
 
     @Override
     public void init() {
@@ -69,7 +67,7 @@ public class RobotMain implements IRobotProgram {
 
             Logs.info("Executing vision code...");
             ChannelExec exec = (ChannelExec)sess.openChannel("exec");
-            exec.setCommand("screen -S vision; python ~/visionNetworkRun.py; detach");
+            exec.setCommand("killall -9 python; setsid python visionNetworkRun.py </dev/zero &>vision.log &");
             exec.connect();
             exec.disconnect();
         } catch (Exception e) {
@@ -79,6 +77,7 @@ public class RobotMain implements IRobotProgram {
             if (sess != null)
                 sess.disconnect();
         }
+        Logs.info("Vision code deploy done.");
 
         // Nav board
         ahrs = new AHRS(SerialPort.Port.kMXP);
@@ -89,7 +88,7 @@ public class RobotMain implements IRobotProgram {
         // Drive train
         Source<Vector4> srcDrive = SourceSystems.CONTROL.dualJoy(1)
                 .map(MapperSystems.DRIVE.dualJoyMecanum())
-                .map(Data.mapper(v -> v.x(v.x() * 0.75).y(v.y() * -0.75).z(v.z() * -1)));
+                .map(Data.mapper(v -> v.x(v.x() * -0.75).y(v.y() * -0.75).z(v.z() * -1)));
         MotorTuple4 talons = MotorTuple4.ofCANTalons(1, 4, 6, 3);
         talons.getFrontLeft().setInverted(true);
         talons.getFrontRight().setInverted(true);
@@ -126,6 +125,8 @@ public class RobotMain implements IRobotProgram {
         // Vision data source
         Source<Pair<Vector4, Vector4>> srcVis = Data.cached(new VisionDataProvider(), 50L);
 
+        tbl = NetworkTable.getTable("gearPlacerVision");
+
         // Auto routine control
         SendableChooser<Integer> rtCtrl = new SendableChooser<>();
         rtCtrl.addObject("left", -1);
@@ -154,66 +155,34 @@ public class RobotMain implements IRobotProgram {
             int routine = rtCtrl.getSelected();
 
             Logs.info("Step 1: drive fwd");
-
             if (routine != 0) { // Case: routine is not 0
                 drive(vec2.y(0.35D), 1650L); // Drive forwards a bit
-                ptTurn(0.35, 30 * Math.signum(routine)); // Turn 30 degrees times n
+                ptTurn(0.35, -30 * Math.signum(routine)); // Turn 30 degrees times n
             } else { // Case: routine is 0
-                drive(vec2.y(0.35D), 500L); // Drive forwards a bit
+                drive(vec2.y(0.3D), 400L); // Drive forwards a bit
             }
             vec2.y(0); // Reset vec2
 
-            Logs.info("Step 2: rotate by vision");
-            Flow.waitFor(1300L);
+            int iterations = 3;
+            for (int i = 0; i < iterations; i++) {
+                Logs.info("Step 2: rotate by vision");
+                autoVisionRotate(srcVis, vec4);
 
-            Data.pushState(); // Push current state
-            Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
-                    c -> c == null ? Vector4.ZERO : vec4.z(0.31 * Math.signum(c.getB().w() - c.getA().w()))
-            ));
-            snkDrive.bind(srcVisionRotate);
-            Flow.waitUntil(() -> {
-                Pair<Vector4, Vector4> c = srcVis.get();
-                return c != null && Math.abs(c.getA().w() - c.getB().w()) < 4;
-            });
-            Data.popState(); // Pop previous state
-            vec4.z(0);
+                Logs.info("Step 3: strafe by vision");
+                autoVisionStrafe(srcVis, vec4);
 
-            Logs.info("Step 3: strafe by vision");
-            Flow.waitFor(1300L);
-
-            Data.pushState();
-            Source<Double> srcPegDiff = srcVis.map(Data.mapper(
-                c -> c == null ? null : (c.getA().x() + c.getB().x()) / 2D - 268
-            ));
-            Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
-                    d -> d == null ? Vector4.ZERO : vec4.x(-0.4 * Math.signum(d))
-            ));
-            snkDrive.bind(srcVisionStrafe);
-            srcJerk.bind(srcAccelY);
-            Flow.waitUntil(() -> {
-                Double diff = srcPegDiff.get();
-                return diff != null && Math.abs(diff) < 5;
-            });
-            Data.popState();
-            vec4.x(0);
+                if (i != iterations - 1)
+                    drive(vec2.y(0.35D), 1650L);
+            }
 
             Logs.info("Step 4: drive into peg");
-            Flow.waitFor(1300L);
-
             Data.pushState();
-            snkDrive.bind(Data.source(() -> vec4.y(0.32D)));
-            Flow.waitUntil(() -> {
-                Double jerk = srcJerk.get();
-                if (jerk == null)
-                    return false;
-                Logs.info(jerk);
-                return jerk > 0.1D;
-            });
+            snkDrive.bind(Data.source(() -> vec4.y(0.265D)));
+            Flow.waitUntil(() -> tbl.getNumberArray("x", new double[1]).length < 1);
+            Flow.waitFor(750L);
             Data.popState();
 
             Logs.info("Step 5: release gear and back off");
-            Flow.waitFor(1300L);
-
             Data.pushState();
             snkWs.bind(Data.source(() -> 115D));
             Flow.waitFor(500);
@@ -221,8 +190,56 @@ public class RobotMain implements IRobotProgram {
             Data.popState();
             vec2.y(0);
 
-            // TODO Cross line
+            Logs.info("Step 6: Cross the line");
+            switch (routine) {
+                case -1:
+                    ptTurn(0.35, -30);
+                    drive(vec2.y(0.3), 1000L);
+                    break;
+                case 0:
+                    ptTurn(0.35, 30);
+                    drive(vec2.y(0.3), 800L);
+                    ptTurn(0.35, -30);
+                    drive(vec2.y(0.3), 1000L);
+                    break;
+                case 1:
+                    ptTurn(0.35, 30);
+                    drive(vec2.y(0.3), 1000L);
+                    break;
+            }
+            vec2.y(0);
         });
+    }
+
+    private void autoVisionRotate(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
+        Data.pushState(); // Push current state
+        Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
+                c -> c == null ? Vector4.ZERO : vec4.z(-0.26 * Math.signum(c.getB().w() - c.getA().w()))
+        ));
+        snkDrive.bind(srcVisionRotate);
+        Flow.waitUntil(() -> {
+            Pair<Vector4, Vector4> c = srcVis.get();
+            return c != null && Math.abs(c.getA().w() - c.getB().w()) < 2;
+        });
+        Data.popState(); // Pop previous state
+        vec4.z(0);
+    }
+
+    private void autoVisionStrafe(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
+        Data.pushState();
+        Source<Double> srcPegDiff = srcVis.map(Data.mapper(
+                c -> c == null ? null : (c.getA().x() + c.getB().x()) / 2D - (320)
+        ));
+        Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
+                d -> d == null ? Vector4.ZERO : vec4.x(-0.4 * Math.signum(d))
+        ));
+        snkDrive.bind(srcVisionStrafe);
+        Flow.waitUntil(() -> {
+            Double diff = srcPegDiff.get();
+            return diff != null && Math.abs(diff) < 3;
+        });
+        Data.popState();
+        vec4.x(0);
     }
 
     private void drive(Vector2 vec, long time) {

@@ -7,7 +7,7 @@ from time import clock
 import grip
 
 NetworkTables.initialize(server='roborio-167-frc.local')
-table = NetworkTables.getTable('myContoursReport')
+table = NetworkTables.getTable('gearPlacerVision')
 
 camera = PiCamera()
 camera.resolution = (416, 320)
