@@ -13,6 +13,12 @@ import org.iowacityrobotics.roboed.util.math.Vector4;
 public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
     
     private final NetworkTable tbl;
+
+    public static long lastFrameTime = -1L;
+
+    public static long timeDiff() {
+        return lastFrameTime == -1L ? 0L : System.currentTimeMillis() - lastFrameTime;
+    }
     
     public VisionDataProvider() {
         this.tbl = NetworkTable.getTable("gearPlacerVision");
@@ -29,6 +35,9 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
             return null;
         if ((arrH = tbl.getNumberArray("h", (double[])null)) == null) // Same for height
             return null;
+        if (arrX.length < 2) // Case: there are less than two contours
+            return null;
+        lastFrameTime = System.currentTimeMillis();
         if (arrX.length == 2) { // Case: there are only two contours
             return Pair.of( // Just return them
                     new Vector4(arrX[0], arrY[0], arrW[0], arrH[0]),
@@ -77,7 +86,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
                         new Vector4(arrX[1], arrY[1], arrW[1], arrH[1])
                 );
             }
-        } else { // Case: more than three or less than two contours
+        } else { // Case: more than three contours
             return null; // Abort
         }
     }

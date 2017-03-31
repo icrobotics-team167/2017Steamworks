@@ -20,6 +20,8 @@ for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=
     datax, datay, dataw, datah = [], [], [], []
     for contour in contours:
         data = cv2.boundingRect(contour)
+        if data[2] * data[3] < 64:
+            continue
         datax.append(data[0])
         datay.append(data[1])
         dataw.append(data[2])

@@ -21,15 +21,11 @@ import org.iowacityrobotics.roboed.subsystem.SourceSystems;
 import org.iowacityrobotics.roboed.util.collection.Pair;
 import org.iowacityrobotics.roboed.util.logging.LogLevel;
 import org.iowacityrobotics.roboed.util.logging.Logs;
-import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
 import org.iowacityrobotics.roboed.vision.CameraType;
 import org.iowacityrobotics.roboed.vision.VisionServer;
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.imgproc.Imgproc;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -41,6 +37,8 @@ import java.util.jar.JarFile;
 
 public class RobotMain implements IRobotProgram {
 
+    public static final double WCLOSED = 103D, WOPEN = 45D;
+
     private AHRS ahrs;
     private Sink<Vector4> snkDrive;
     private NetworkTable tbl;
@@ -50,7 +48,7 @@ public class RobotMain implements IRobotProgram {
         Logs.setLevel(LogLevel.DEBUG);
 
         // Deploy vision code
-        /*Session sess = null;
+        Session sess = null;
         try (JarFile jar = new JarFile(new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath()))) {
             Logs.info("Establishing SSH connection to rpi...");
             sess = SSHUtil.connect("raspberrypi.local", 22, "pi", "raspberry");
@@ -87,15 +85,15 @@ public class RobotMain implements IRobotProgram {
             if (sess != null)
                 sess.disconnect();
         }
-        Logs.info("Vision code deploy done.");*/
+        Logs.info("Vision code deploy done.");
 
-        Logs.info("Initializing camera stream.");
+        /*Logs.info("Initializing camera stream.");
         Supplier<Mat> cam = VisionServer.getCamera(CameraType.USB, 0);
         VisionServer.putImageSource("usb-cam", () -> {
             Mat frame = cam.get();
             //Imgproc.line(frame, new Point(), new Point(), new Scalar(1, 0, 0));
             return frame;
-        });
+        });*/
 
         // Nav board
         ahrs = new AHRS(SerialPort.Port.kMXP);
@@ -120,7 +118,7 @@ public class RobotMain implements IRobotProgram {
                 }));
         MotorTuple4 talons = MotorTuple4.ofCANTalons(1, 4, 6, 3);
         talons.getFrontLeft().setInverted(true);
-        talons.getFrontRight().setInverted(true);
+        talons.getRearLeft().setInverted(true);
         snkDrive = SinkSystems.DRIVE.mecanum(talons);
 
         // Climber
@@ -145,7 +143,7 @@ public class RobotMain implements IRobotProgram {
         // Windshield wiper
         //Source<Double> asdf = Data.source(() -> SmartDashboard.getNumber("theServoAngle", 0));
         Source<Double> srcWs = SourceSystems.CONTROL.button(2, 3)
-                .map(MapperSystems.CONTROL.buttonValue(103D, 45D));
+                .map(MapperSystems.CONTROL.buttonValue(WCLOSED, WOPEN));
         Sink<Double> snkWs = SinkSystems.MOTOR.servo(0);
 
         // Ultrasonic sensor
@@ -166,9 +164,13 @@ public class RobotMain implements IRobotProgram {
         rtCtrl.addObject("blue boiler", 666);
         SmartDashboard.putData("routine", rtCtrl);
 
-        SendableChooser<Boolean> doVision = new SendableChooser<>();
-        doVision.addObject("do the vision stuff pls", true);
-        doVision.addObject("don't do that!!!!", false);
+        SendableChooser<Supplier<AutoStuff>> doVision = new SendableChooser<>();
+        doVision.addObject("do the vision stuff pls", () -> new AutoStuff.WithVision(
+                snkDrive, ahrs, snkShoot, snkEgg, snkWs, srcVis
+        ));
+        doVision.addObject("don't do that!!!!", () -> new AutoStuff.NoVision(
+                snkDrive, ahrs, snkShoot, snkEgg
+        ));
         SmartDashboard.putData("do vision?", doVision);
 
         // Teleop mode
@@ -184,177 +186,12 @@ public class RobotMain implements IRobotProgram {
 
         // Auto mode
         RobotMode.AUTO.setOperation(() -> {
-            // Define some vecs for efficiency reasons
-            final Vector2 vec2 = new Vector2();
-            final Vector4 vec4 = new Vector4();
-
-            // Determine routine number n <- {-1, 0, 1}
-            int routine = rtCtrl.getSelected();
-
-            // VISION???????
-            boolean canSee = doVision.getSelected();
-
-            // Let's raise the bar lads
-            snkWs.bind(Data.source(() -> 103D));
-
-            if (routine == 420) { // Red boiler, strafe left
-                Data.pushState();
-                snkShoot.bind(Data.source(() -> 1D));
-                snkEgg.bind(Data.source(() -> 0.8));
-                Flow.waitFor(10000L);
-                Data.pushState();
-                snkDrive.bind(Data.source(() -> vec4.x(1D).z(0.14D)));
-                Flow.waitFor(3000L);
-                Data.popState();
-                ptTurn(0.3D, 180F);
-                Data.popState();
-                vec4.x(0).z(0);
-            } else if (routine == 666) { // Blue boiler, strafe right
-                Data.pushState();
-                snkShoot.bind(Data.source(() -> 1D));
-                snkEgg.bind(Data.source(() -> 0.8));
-                Flow.waitFor(10000L);
-                Data.pushState();
-                snkDrive.bind(Data.source(() -> vec4.x(-1D).z(-0.14D)));
-                Flow.waitFor(3000L);
-                Data.popState();
-                ptTurn(0.3D, 180F);
-                Data.popState();
-                vec4.x(0).z(0);
-            } else {
-                if (canSee) {
-                    Logs.info("Step 1: drive fwd");
-                    if (routine != 0) { // Case: routine is not 0
-                        drive(vec2.y(0.35D), 2170L); // Drive forwards to line
-                        //ptTurn(0.35, -30 * Math.signum(routine)); // Turn 30 degrees times n
-                    } else { // Case: routine is 0
-                        drive(vec2.y(0.3D), 400L); // Drive forwards a bit
-                    }
-                    vec2.y(0); // Reset vec2
-
-                    int iterations = 3;
-                    for (int i = 0; i < iterations; i++) {
-                        Logs.info("Step 2: rotate by vision");
-                        autoVisionRotate(srcVis, vec4);
-
-                        Logs.info("Step 3: strafe by vision");
-                        autoVisionStrafe(srcVis, vec4);
-
-                        if (i != iterations - 1)
-                            drive(vec2.y(0.35D), 1650L);
-                    }
-
-                    Logs.info("Step 4: drive into peg");
-                    Data.pushState();
-                    snkDrive.bind(Data.source(() -> vec4.y(0.265D)));
-                    Flow.waitUntil(() -> tbl.getNumberArray("x", new double[1]).length < 1);
-                    Flow.waitFor(750L);
-                    Data.popState();
-
-                    Logs.info("Step 5: release gear and back off");
-                    Data.pushState();
-                    snkWs.bind(Data.source(() -> 45D));
-                    Flow.waitFor(500);
-                    drive(vec2.y(-0.35), 500L);
-                    Data.popState();
-                    vec2.y(0);
-
-                    Logs.info("Step 6: Cross the line");
-                    switch (routine) {
-                        case -1:
-                            ptTurn(0.35, -30);
-                            drive(vec2.y(0.3), 1000L);
-                            break;
-                        case 0:
-                            ptTurn(0.35, 30);
-                            drive(vec2.y(0.3), 800L);
-                            ptTurn(0.35, -30);
-                            drive(vec2.y(0.3), 1000L);
-                            break;
-                        case 1:
-                            ptTurn(0.35, 30);
-                            drive(vec2.y(0.3), 1000L);
-                            break;
-                    }
-                    vec2.y(0);
-                } else {
-                    Logs.info("Robot is Lee Sin!");
-                    if (routine != 0) {
-                        Logs.info("That ain't the center! Bye");
-                        drive(vec2.y(0.71), 1650L);
-                        vec2.y(0);
-                    } else {
-                        Logs.info("That's the center!!!! We're gonna give that gear the big smackdown");
-                        drive(vec2.y(0.375), 1500L);
-                        vec2.y(0);
-
-                        Logs.info("Here we go boys");
-                        Data.pushState();
-                        snkWs.bind(Data.source(() -> 45D));
-                        Flow.waitFor(500);
-                        drive(vec2.y(-0.35), 500L);
-                        Data.popState();
-                        vec2.y(0);
-
-                        Logs.info("Gear placed (?). Crossing line.");
-                        ptTurn(0.35, 30);
-                        drive(vec2.y(0.3), 800L);
-                        ptTurn(0.35, -30);
-                        drive(vec2.y(0.3), 1000L);
-                    }
-                }
-            }
-
-            Flow.waitInfinite();
+            int routine = rtCtrl.getSelected(); // Determine routine number n <- {-1, 0, 1}
+            AutoStuff auto = doVision.getSelected().get(); // Check if we want to do vision
+            snkWs.bind(Data.source(() -> WCLOSED)); // Raise the windshield
+            auto.execute(routine); // Do the routine
+            Flow.waitInfinite(); // Stall, in case we have the gear on board
         });
-    }
-
-    private void autoVisionRotate(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
-        Data.pushState(); // Push current state
-        Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
-                c -> c == null ? Vector4.ZERO : vec4.z(-0.26 * Math.signum(c.getB().w() - c.getA().w()))
-        ));
-        snkDrive.bind(srcVisionRotate);
-        Flow.waitUntil(() -> {
-            Pair<Vector4, Vector4> c = srcVis.get();
-            return c != null && Math.abs(c.getA().w() - c.getB().w()) < 2;
-        });
-        Data.popState(); // Pop previous state
-        vec4.z(0);
-    }
-
-    private void autoVisionStrafe(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
-        Data.pushState();
-        Source<Double> srcPegDiff = srcVis.map(Data.mapper(
-                c -> c == null ? null : (c.getA().x() + c.getB().x()) / 2D - (320)
-        ));
-        Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
-                d -> d == null ? Vector4.ZERO : vec4.x(-0.4 * Math.signum(d))
-        ));
-        snkDrive.bind(srcVisionStrafe);
-        Flow.waitUntil(() -> {
-            Double diff = srcPegDiff.get();
-            return diff != null && Math.abs(diff) < 3;
-        });
-        Data.popState();
-        vec4.x(0);
-    }
-
-    private void drive(Vector2 vec, long time) {
-        Data.pushState();
-        ahrs.reset();
-        final Vector4 moveVec = new Vector4(vec.x(), vec.y(), 0, 0);
-        snkDrive.bind(Data.source(() -> moveVec/*.w(ahrs.getAngle())*/));
-        Flow.waitFor(time);
-        Data.popState();
-    }
-
-    private void ptTurn(double speed, float deltaAngle) {
-        Data.pushState();
-        final Vector4 moveVec = new Vector4(0, 0, -speed * Math.signum(deltaAngle), ahrs.getAngle());
-        snkDrive.bind(Data.source(() -> moveVec));
-        Flow.waitUntil(new NavAngle(ahrs, deltaAngle));
-        Data.popState();
     }
 
 }
