@@ -38,6 +38,8 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
         if (arrX.length < 2) // Case: there are less than two contours
             return null;
         lastFrameTime = System.currentTimeMillis();
+        if (arrX.length < 2) // Case: there are less than two contours
+            return null;
         if (arrX.length == 2) { // Case: there are only two contours
             return Pair.of( // Just return them
                     new Vector4(arrX[0], arrY[0], arrW[0], arrH[0]),
@@ -63,7 +65,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
                 );
             } else if (dX_bc < dX_ac) { // Same for B and C
                 double h = Math.abs(arrY[2] - arrY[1]) + 0.5D * (arrH[1] + arrH[2]);
-                int lowInd = arrY[1] < arrY[2] ? 0 : 1;
+                int lowInd = arrY[1] < arrY[2] ? 1 : 2;
                 return Pair.of(
                         new Vector4(
                                 Maths.average(arrX[1], arrX[2]),
@@ -75,7 +77,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
                 );
             } else { // Same for A and C
                 double h = Math.abs(arrY[2] - arrY[0]) + 0.5D * (arrH[0] + arrH[2]);
-                int lowInd = arrY[0] < arrY[2] ? 0 : 1;
+                int lowInd = arrY[0] < arrY[2] ? 0 : 2;
                 return Pair.of(
                         new Vector4(
                                 Maths.average(arrX[0], arrX[2]),

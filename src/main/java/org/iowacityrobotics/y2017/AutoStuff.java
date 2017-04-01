@@ -7,6 +7,7 @@ import org.iowacityrobotics.roboed.data.source.Source;
 import org.iowacityrobotics.roboed.robot.Flow;
 import org.iowacityrobotics.roboed.util.collection.Pair;
 import org.iowacityrobotics.roboed.util.logging.Logs;
+import org.iowacityrobotics.roboed.util.math.Maths;
 import org.iowacityrobotics.roboed.util.math.Vector2;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 
@@ -126,18 +127,24 @@ public abstract class AutoStuff {
 
             Logs.info("drive fwd");
             if (routine != 0) { // Case: routine is not 0
-                drive(vec2.y(0.35D), 2170L); // Drive forwards to line
-                ptTurn(0.35, -30 * Math.signum(routine)); // Turn 30 degrees times n
-            } else { // Case: routine is 0
-                drive(vec2.y(0.+3D), 400L); // Drive forwards a bit
+                drive(vec2.y(0.25D), 2850L); // Drive forwards to line
+                ptTurn(0.32, -30 * Math.signum(routine)); // Turn 30 degrees times n
             }
             vec2.y(0); // Reset vec2
 
+            Logs.info("Finding the contours...");
+            Data.pushState();
+            snkDrive.bind(Data.source(() -> vec4.y(0.3)));
+            Flow.waitUntil(() -> srcVis.get() != null);
+            Data.popState();
+            vec4.y(0);
+
             Logs.info("rotate normal");
             autoVisionRotate(srcVis, vec4); // Turn until normal to reflector tape
+            double angle = ahrs.getAngle();
 
             Logs.info("Approach quietly... .. ... . .");
-            autoVisionApproach(srcVis, vec4, vec2); // Approach the peg and place gear
+            autoVisionApproach(srcVis, vec4, angle); // Approach the peg and place gear
 
             Logs.info("release gear and back off");
             Data.pushState();
@@ -152,7 +159,7 @@ public abstract class AutoStuff {
             Data.pushState();
             snkShoot.bind(Data.source(() -> 1D));
             snkEgg.bind(Data.source(() -> 0.8));
-            Flow.waitFor(4000L);
+            Flow.waitFor(6000L);
             Data.popState();
             Logs.info("done! let's go the other way");
         }
@@ -160,7 +167,7 @@ public abstract class AutoStuff {
         public void autoVisionRotate(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
             Data.pushState();
             Source<Vector4> srcVisionRotate = srcVis.map(Data.mapper(
-                    c -> c == null ? Vector4.ZERO : vec4.z(-0.26 * Math.signum(c.getB().w() - c.getA().w()))
+                    c -> c == null ? Vector4.ZERO : vec4.z(0.26 * Math.signum(c.getB().w() - c.getA().w()))
             ));
             snkDrive.bind(srcVisionRotate);
             Flow.waitUntil(() -> {
@@ -171,20 +178,24 @@ public abstract class AutoStuff {
             vec4.z(0);
         }
 
-        public void autoVisionApproach(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4, Vector2 vec2) {
+        public void autoVisionApproach(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4, double angle) {
             Data.pushState();
             Source<Double> srcPegDiff = srcVis.map(Data.mapper(
                     c -> c == null ? null : (c.getA().x() + c.getB().x()) / 2D - 320
             ));
             Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
-                    d -> d == null ? vec4.x(0).y(0.24) : vec4.x(-0.4 * Math.signum(d)).y(0.3)
+                    d -> d == null
+                            ? vec4.x(0).y(0.18).z(Math.min(0.08D, -0.016 * (angle - ahrs.getAngle())))
+                            : vec4.x(-0.23 * Math.signum(d)).y(0.24).z(Math.min(0.06D, -0.016 * (angle - ahrs.getAngle())))
             ));
-            snkDrive.bind(srcVisionStrafe);
+            Source<Vector4> srcFinalStrafe = srcVisionStrafe.inter(srcVis, Data.inter(
+                    (d, v) -> v == null ? d
+                            : d.y(d.y() * Maths.clamp((279D - Math.abs(v.getB().x() - v.getA().x())) / 279D, 0.2, 1))
+            ));
+            snkDrive.bind(srcFinalStrafe);
             Flow.waitUntil(() -> VisionDataProvider.timeDiff() > 750L);
             Data.popState();
-            vec4.x(0).y(0);
-            drive(vec2.y(0.32), 750L);
-            vec2.y(0);
+            vec4.x(0).y(0).z(0);
         }
 
     }
