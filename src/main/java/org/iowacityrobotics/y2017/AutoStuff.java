@@ -39,9 +39,20 @@ public abstract class AutoStuff {
 
     public void ptTurn(double speed, float deltaAngle) {
         Data.pushState();
-        final Vector4 moveVec = new Vector4(0, 0, -speed * Math.signum(deltaAngle), ahrs.getAngle());
-        snkDrive.bind(Data.source(() -> moveVec));
-        Flow.waitUntil(new NavAngle(ahrs, deltaAngle));
+        double target = ahrs.getAngle() + deltaAngle;
+        Source<Double> srcDiff = Data.source(() -> target - ahrs.getAngle());
+        final Vector4 moveVec = new Vector4(0, 0, 0, ahrs.getAngle());
+        snkDrive.bind(Data.source(() -> {
+            double fastness = srcDiff.get() * -speed / 30D;
+            return moveVec.z(fastness > 1
+                    ? Maths.clamp(fastness, 0.18D, 0.32D)
+                    : Maths.clamp(fastness, -0.32D, -0.18D));
+        }));
+        Flow.whileWaiting(() -> {
+            Logs.info("angle: {}", ahrs.getAngle());
+            Logs.info("adiff: {}", srcDiff.get());
+        });
+        Flow.waitUntil(() -> Math.abs(srcDiff.get()) < 0.5D);
         Data.popState();
     }
 
@@ -127,24 +138,23 @@ public abstract class AutoStuff {
 
             Logs.info("drive fwd");
             if (routine != 0) { // Case: routine is not 0
-                drive(vec2.y(0.25D), 2850L); // Drive forwards to line
-                ptTurn(0.32, -30 * Math.signum(routine)); // Turn 30 degrees times n
+                drive(vec2.y(0.25D), 2700L); // Drive forwards to line
+                ptTurn(0.3D, -60 * Math.signum(routine)); // Turn 30 degrees times n
             }
             vec2.y(0); // Reset vec2
 
             Logs.info("Finding the contours...");
             Data.pushState();
-            snkDrive.bind(Data.source(() -> vec4.y(0.3)));
+            snkDrive.bind(Data.source(() -> vec4.y(0.25)));
             Flow.waitUntil(() -> srcVis.get() != null);
             Data.popState();
             vec4.y(0);
 
-            Logs.info("rotate normal");
-            autoVisionRotate(srcVis, vec4); // Turn until normal to reflector tape
-            double angle = ahrs.getAngle();
+//            Logs.info("rotate normal");
+//            autoVisionRotate(srcVis, vec4); // Turn until normal to reflector tape
 
             Logs.info("Approach quietly... .. ... . .");
-            autoVisionApproach(srcVis, vec4, angle); // Approach the peg and place gear
+            autoVisionApproach(srcVis, vec4); // Approach the peg and place gear
 
             Logs.info("release gear and back off");
             Data.pushState();
@@ -178,19 +188,20 @@ public abstract class AutoStuff {
             vec4.z(0);
         }
 
-        public void autoVisionApproach(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4, double angle) {
+        public void autoVisionApproach(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
             Data.pushState();
+            double initAngle = ahrs.getAngle();
             Source<Double> srcPegDiff = srcVis.map(Data.mapper(
                     c -> c == null ? null : (c.getA().x() + c.getB().x()) / 2D - 320
             ));
             Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
                     d -> d == null
-                            ? vec4.x(0).y(0.18).z(Math.min(0.08D, -0.016 * (angle - ahrs.getAngle())))
-                            : vec4.x(-0.23 * Math.signum(d)).y(0.24).z(Math.min(0.06D, -0.016 * (angle - ahrs.getAngle())))
+                            ? vec4.x(0).y(0.18).z(Math.min(0.08D, -0.016 * (initAngle - ahrs.getAngle())))
+                            : vec4.x(-0.23 * Math.signum(d)).y(0.24).z(Math.min(0.06D, -0.016 * (initAngle - ahrs.getAngle())))
             ));
             Source<Vector4> srcFinalStrafe = srcVisionStrafe.inter(srcVis, Data.inter(
                     (d, v) -> v == null ? d
-                            : d.y(d.y() * Maths.clamp((279D - Math.abs(v.getB().x() - v.getA().x())) / 279D, 0.2, 1))
+                            : d.y(d.y() * Maths.clamp((279D - Math.abs(v.getB().x() - v.getA().x())) / 279D, 0.24, 1))
             ));
             snkDrive.bind(srcFinalStrafe);
             Flow.waitUntil(() -> VisionDataProvider.timeDiff() > 750L);

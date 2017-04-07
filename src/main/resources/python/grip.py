@@ -66,9 +66,9 @@ class GripPipeline:
         self.__convex_hulls_contours = self.find_contours_output
         (self.convex_hulls_output) = self.__convex_hulls(self.__convex_hulls_contours)
 
-        if len(self.convex_hulls_output) > 3:
-            cv2.imwrite("wtf-%d.jpg" % self.wtf_index, self.resize_image_output)
-            self.wtf_index += 1
+        # if len(self.convex_hulls_output) > 3:
+        #     cv2.imwrite("wtf-%d.jpg" % self.wtf_index, self.resize_image_output)
+        #     self.wtf_index += 1
 
         return self.convex_hulls_output
 

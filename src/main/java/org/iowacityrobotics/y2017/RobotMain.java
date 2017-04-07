@@ -5,7 +5,7 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.kauailabs.navx.frc.AHRS;
-import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -23,9 +23,6 @@ import org.iowacityrobotics.roboed.util.logging.LogLevel;
 import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
-import org.iowacityrobotics.roboed.vision.CameraType;
-import org.iowacityrobotics.roboed.vision.VisionServer;
-import org.opencv.core.Mat;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -96,8 +93,10 @@ public class RobotMain implements IRobotProgram {
         });*/
 
         // Nav board
-        ahrs = new AHRS(SerialPort.Port.kMXP);
+        ahrs = new AHRS(SPI.Port.kMXP);
         ahrs.reset();
+        ahrs.enableLogging(true);
+        Logs.info("Gyro is connected: {}", ahrs.isConnected());
         Source<Double> srcAccelY = Data.source(() -> (double)ahrs.getRawAccelY());
         Differential srcJerk = new Differential();
 
