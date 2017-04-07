@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'idea'
-    id 'jaci.openrio.gradle.GradleRIO' version '2017.1.0'
+    id 'jaci.openrio.gradle.GradleRIO' version '2017.1.5'
 }
 
 frc {
@@ -17,6 +17,7 @@ repositories {
 dependencies {
     compile wpilib()
     compile talonSrx()
+    compile navx()
     compile group: 'org.iowacityrobotics.roboed', name: 'RoboED', version: '2017-1.0.0'
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.44-1'
     compile fileTree(dir: 'libs', include: '**/*.jar')
