@@ -123,23 +123,14 @@ public abstract class AutoStuff {
         public void execute(int routine) {
             Vector4 vec4 = new Vector4();
             Vector2 vec2 = new Vector2();
-            switch (routine) {
-                case 420: // Red boiler, strafe left
-                    Logs.info("shooting at red boiler");
-                    boilerShoot();
-                    // TODO Turn towards the gear
-                    break;
-                case 666: // Blue boiler, strafe right
-                    Logs.info("shooting at blue boiler");
-                    boilerShoot();
-                    // TODO Turn towards the gear
-                    break;
-            }
 
             Logs.info("drive fwd");
-            if (routine != 0) { // Case: routine is not 0
+            if (routine == 420 || routine == 1) {
                 drive(vec2.y(0.25D), 2700L); // Drive forwards to line
-                ptTurn(0.3D, -60 * Math.signum(routine)); // Turn 30 degrees times n
+                ptTurn(0.3D, -60);
+            } else if (routine == 666 || routine == -1) {
+                drive(vec2.y(0.25D), 2700L); // Drive forwards to line
+                ptTurn(0.3D, 60);
             }
             vec2.y(0); // Reset vec2
 
@@ -163,15 +154,29 @@ public abstract class AutoStuff {
             drive(vec2.y(-0.35), 500L);
             Data.popState();
             vec2.y(0);
+
+            switch (routine) {
+                case 420: // Red boiler, turn ccw
+                    Logs.info("shooting at red boiler");
+                    ptTurn(0.3D, -159F);
+                    boilerShoot(vec2);
+                    break;
+                case 666: // Blue boiler, turn cw
+                    Logs.info("shooting at blue boiler");
+                    ptTurn(0.3D, 159F);
+                    boilerShoot(vec2);
+                    break;
+            }
         }
 
-        public void boilerShoot() {
+        public void boilerShoot(Vector2 vec2) {
             Data.pushState();
             snkShoot.bind(Data.source(() -> 1D));
             snkEgg.bind(Data.source(() -> 0.8));
-            Flow.waitFor(6000L);
+            drive(vec2.y(0.25D), 1100L);
+            Flow.waitInfinite();
             Data.popState();
-            Logs.info("done! let's go the other way");
+            vec2.y(0);
         }
 
         public void autoVisionRotate(Source<Pair<Vector4, Vector4>> srcVis, Vector4 vec4) {
