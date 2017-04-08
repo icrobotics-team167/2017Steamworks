@@ -13,6 +13,7 @@ camera = PiCamera()
 camera.resolution = (416, 320)
 camera.framerate = 24
 camera.exposure_compensation = 0
+camera.hflip = camera.vflip = True
 rawCapture = PiRGBArray(camera, size=(416, 320))
 processor = grip.GripPipeline()
 for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=True):
@@ -20,7 +21,7 @@ for frame in camera.capture_continuous(rawCapture, format='bgr', use_video_port=
     datax, datay, dataw, datah = [], [], [], []
     for contour in contours:
         data = cv2.boundingRect(contour)
-        if data[2] * data[3] < 156:
+        if data[2] * data[3] < 170:
             continue
         datax.append(data[0])
         datay.append(data[1])

@@ -35,7 +35,7 @@ public class VisionDataProvider extends Source<Pair<Vector4, Vector4>> {
             return null;
         if ((arrH = tbl.getNumberArray("h", (double[])null)) == null) // Same for height
             return null;
-        if (arrX.length < 2) // Case: there are less than two contours
+        if (arrX.length < 1) // Case: there aren't any contours
             return null;
         lastFrameTime = System.currentTimeMillis();
         if (arrX.length < 2) // Case: there are less than two contours

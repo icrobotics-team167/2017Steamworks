@@ -48,10 +48,6 @@ public abstract class AutoStuff {
                     ? Maths.clamp(fastness, 0.18D, 0.32D)
                     : Maths.clamp(fastness, -0.32D, -0.18D));
         }));
-        Flow.whileWaiting(() -> {
-            Logs.info("angle: {}", ahrs.getAngle());
-            Logs.info("adiff: {}", srcDiff.get());
-        });
         Flow.waitUntil(() -> Math.abs(srcDiff.get()) < 0.5D);
         Data.popState();
     }
@@ -126,10 +122,10 @@ public abstract class AutoStuff {
 
             Logs.info("drive fwd");
             if (routine == 420 || routine == 1) {
-                drive(vec2.y(0.25D), 2700L); // Drive forwards to line
+                drive(vec2.y(0.25D), 2600L); // Drive forwards to line
                 ptTurn(0.3D, -60);
             } else if (routine == 666 || routine == -1) {
-                drive(vec2.y(0.25D), 2700L); // Drive forwards to line
+                drive(vec2.y(0.25D), 2600L); // Drive forwards to line
                 ptTurn(0.3D, 60);
             }
             vec2.y(0); // Reset vec2
@@ -202,14 +198,20 @@ public abstract class AutoStuff {
             Source<Vector4> srcVisionStrafe = srcPegDiff.map(Data.mapper(
                     d -> d == null
                             ? vec4.x(0).y(0.18).z(Math.min(0.08D, -0.016 * (initAngle - ahrs.getAngle())))
-                            : vec4.x(-0.23 * Math.signum(d)).y(0.24).z(Math.min(0.06D, -0.016 * (initAngle - ahrs.getAngle())))
+                            : vec4.x(-0.2D * Math.signum(Maths.threshAbs(d, 1D))).y(0.24).z(Math.min(0.06D, -0.016 * (initAngle - ahrs.getAngle())))
             ));
             Source<Vector4> srcFinalStrafe = srcVisionStrafe.inter(srcVis, Data.inter(
                     (d, v) -> v == null ? d
                             : d.y(d.y() * Maths.clamp((279D - Math.abs(v.getB().x() - v.getA().x())) / 279D, 0.24, 1))
             ));
             snkDrive.bind(srcFinalStrafe);
-            Flow.waitUntil(() -> VisionDataProvider.timeDiff() > 750L);
+            Flow.whileWaiting(() -> {
+                Double diff = srcPegDiff.get();
+                if (diff != null)
+                    Logs.info("x-diff: {}", diff);
+                Logs.info("t-diff: {}", VisionDataProvider.timeDiff());
+            });
+            Flow.waitUntil(() -> VisionDataProvider.timeDiff() > 800L);
             Data.popState();
             vec4.x(0).y(0).z(0);
         }

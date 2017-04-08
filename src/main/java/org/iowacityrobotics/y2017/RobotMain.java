@@ -70,7 +70,7 @@ public class RobotMain implements IRobotProgram {
 
             Logs.info("Executing vision code...");
             ChannelExec exec = (ChannelExec) sess.openChannel("exec");
-            exec.setCommand("killall -9 python; setsid python visionNetworkRun.py </dev/zero &>vision.log &");
+            exec.setCommand("sudo killall -9 python; setsid python visionNetworkRun.py </dev/zero &>vision.log &");
             exec.connect();
             exec.disconnect();
         } catch (JSchException e) {
@@ -150,7 +150,7 @@ public class RobotMain implements IRobotProgram {
                 .map(Data.mapper(v -> v * 3.4528D));
 
         // Vision data source
-        Source<Pair<Vector4, Vector4>> srcVis = Data.cached(new VisionDataProvider(), 50L);
+        Source<Pair<Vector4, Vector4>> srcVis = new VisionDataProvider();
 
         tbl = NetworkTable.getTable("gearPlacerVision");
 
