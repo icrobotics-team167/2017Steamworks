@@ -23,6 +23,9 @@ import org.iowacityrobotics.roboed.util.logging.LogLevel;
 import org.iowacityrobotics.roboed.util.logging.Logs;
 import org.iowacityrobotics.roboed.util.math.Vector4;
 import org.iowacityrobotics.roboed.util.robot.MotorTuple4;
+import org.iowacityrobotics.roboed.vision.CameraType;
+import org.iowacityrobotics.roboed.vision.VisionServer;
+import org.opencv.core.Mat;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -84,13 +87,13 @@ public class RobotMain implements IRobotProgram {
         }
         Logs.info("Vision code deploy done.");
 
-        /*Logs.info("Initializing camera stream.");
+        Logs.info("Initializing camera stream.");
         Supplier<Mat> cam = VisionServer.getCamera(CameraType.USB, 0);
         VisionServer.putImageSource("usb-cam", () -> {
             Mat frame = cam.get();
             //Imgproc.line(frame, new Point(), new Point(), new Scalar(1, 0, 0));
             return frame;
-        });*/
+        });
 
         // Nav board
         ahrs = new AHRS(SPI.Port.kMXP);
